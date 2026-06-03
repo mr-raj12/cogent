@@ -32,33 +32,36 @@ export const editTool: Tool = {
 	},
 
 	async execute(input): Promise<ReturnType<typeof okResult>> {
-		// TODO PHASE 2 — Implement exact-string replacement
-		//
-		// 1. Resolve and read the file:
-		//    const filePath = resolve(input.file_path as string);
-		//    const content = await readFile(filePath, "utf-8");
-		//
-		// 2. Check old_string exists:
-		//    if (!content.includes(input.old_string as string))
-		//      return errorResult(`old_string not found in file`);
-		//
-		// 3. Check old_string is unique (count occurrences):
-		//    const count = content.split(input.old_string as string).length - 1;
-		//    if (count > 1) return errorResult(`old_string appears ${count} times — must be unique`);
-		//
-		// 4. Replace and write:
-		//    const newContent = content.replace(input.old_string as string, input.new_string as string);
-		//    await writeFile(filePath, newContent, "utf-8");
-		//
-		// 5. Return success:
-		//    return okResult(`Edited ${filePath}`);
-
-		void input;
-		void readFile;
-		void writeFile;
-		void resolve;
-		void okResult;
-		void errorResult;
-		throw new Error("Edit tool not implemented yet — see comments above");
+		try {
+			// TODO PHASE 2 — Implement exact-string replacement
+			//
+			// 1. Resolve and read the file:
+			const filePath = resolve(input.file_path as string);
+			const content = await readFile(filePath, "utf-8");
+			//
+			// 2. Check old_string exists:
+			if (!content.includes(input.old_string as string))
+				return errorResult(`old_string not found in file`);
+			//
+			// 3. Check old_string is unique (count occurrences):
+			const count = content.split(input.old_string as string).length - 1;
+			if (count > 1) return errorResult(`old_string appears ${count} times — must be unique`);
+			//
+			// 4. Replace and write:
+			const newContent = content.replace(input.old_string as string, input.new_string as string);
+			await writeFile(filePath, newContent, "utf-8");
+			//
+			// 5. Return success:
+			return okResult(`Edited ${filePath}`);
+			// void input;
+			// void readFile;
+			// void writeFile;
+			// void resolve;
+			// void okResult;
+			// void errorResult;
+			// throw new Error("Edit tool not implemented yet — see comments above");
+		} catch (err) {
+			return errorResult(err);
+		}
 	},
 };

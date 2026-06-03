@@ -27,29 +27,32 @@ export const writeTool: Tool = {
 	},
 
 	async execute(input): Promise<ReturnType<typeof okResult>> {
-		// TODO PHASE 2 — Implement file writing
-		//
-		// 1. Resolve path:
-		//    const filePath = resolve(input.file_path as string);
-		//
-		// 2. Create parent directories (won't fail if they exist):
-		//    await mkdir(dirname(filePath), { recursive: true });
-		//
-		// 3. Write the file:
-		//    await writeFile(filePath, input.content as string, "utf-8");
-		//
-		// 4. Return success:
-		//    return okResult(`File written: ${filePath}`);
-		//
-		// Wrap in try/catch and return errorResult(err) if anything throws.
-
-		void input;
-		void writeFile;
-		void mkdir;
-		void dirname;
-		void resolve;
-		void okResult;
-		void errorResult;
-		throw new Error("Write tool not implemented yet — see comments above");
+		try {
+			// TODO PHASE 2 — Implement file writing
+			//
+			// 1. Resolve path:
+			const filePath = resolve(input.file_path as string);
+			//
+			// 2. Create parent directories (won't fail if they exist):
+			await mkdir(dirname(filePath), { recursive: true });
+			//
+			// 3. Write the file:
+			await writeFile(filePath, input.content as string, "utf-8");
+			//
+			// 4. Return success:
+			return okResult(`File written: ${filePath}`);
+			//
+			// Wrap in try/catch and return errorResult(err) if anything throws.
+			// void input;
+			// void writeFile;
+			// void mkdir;
+			// void dirname;
+			// void resolve;
+			// void okResult;
+			// void errorResult;
+			// throw new Error("Write tool not implemented yet — see comments above");
+		} catch (err) {
+			return errorResult(err);
+		}
 	},
 };
