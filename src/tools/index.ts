@@ -1,4 +1,5 @@
-import type { Tool, ToolDefinition } from "./types.js";
+import type { Tool } from "./types.js";
+import type { ToolDefinition } from "../providers/types.js";
 import { readTool } from "./read.js";
 import { writeTool } from "./write.js";
 import { editTool } from "./edit.js";

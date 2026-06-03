@@ -21,6 +21,7 @@
 	"dependencies": {
 		"@google/genai": "^1.52.0",
 		"chalk": "^5.4.1",
+		"consola": "^3.4.2",
 		"diff": "^8.0.4",
 		"glob": "^11.0.0",
 		"groq-sdk": "^0.14.0",
