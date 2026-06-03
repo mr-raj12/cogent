@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.local
+.pi-clone/credentials.json
+coverage/
+*.tsbuildinfo
