@@ -1,0 +1,2 @@
+{"type":"session_info","id":"590863ab-16a5-48eb-bb5d-6533ecd1e075","created_at":"2026-06-04T01:28:50.341Z","model":"llama3-70b-8192","provider":"groq"}
+{"type":"message","message":{"role":"user","content":"hello"}}
