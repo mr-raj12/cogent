@@ -116,7 +116,8 @@ export function createGroqProvider(apiKey: string): Provider {
 			let chunkCount = 0;
 			let textDeltaCount = 0;
 
-			for await (const chunk of stream) {
+			try {
+			  for await (const chunk of stream) {
 			    chunkCount++;
 			    const delta = chunk.choices[0]?.delta;
 			    if (chunk.choices[0]?.finish_reason) {
@@ -152,6 +153,35 @@ export function createGroqProvider(apiKey: string): Provider {
 			      }
 			    }
 			  }
+			} catch (err: any) {
+			  // Llama sometimes outputs tool calls as raw text; Groq catches this and returns 400
+			  // with failed_generation containing the raw <function=Name {...}</function> markup.
+			  // Parse it manually and synthesize the tool_use_start/input_delta events.
+			  const failedGen = err?.error?.failed_generation as string | undefined;
+			  if (err?.status === 400 && failedGen) {
+			    consola.warn(`   ⚠️  Groq tool_call serialization failed — parsing failed_generation`);
+			    const regex = /<function=(\w+)\s+(.+?)<\/function>/gs;
+			    let match;
+			    while ((match = regex.exec(failedGen)) !== null) {
+			      const name = match[1]!;
+			      const argsStr = match[2]!;
+			      const idx = Object.keys(toolCallAccumulator).length;
+			      const id = `tc_${name}_${idx}`;
+			      try {
+			        JSON.parse(argsStr);
+			        consola.info(`   📦 fallback tool call: ${name}  args: ${argsStr}`);
+			        toolCallAccumulator[idx] = { id, name, args: argsStr };
+			        yield { type: "tool_use_start", id, name };
+			        yield { type: "tool_use_input_delta", id, delta: argsStr };
+			      } catch {
+			        consola.error(`   ❌ Could not parse args for ${name}: ${argsStr}`);
+			      }
+			    }
+			    finishReason = "tool_calls";
+			  } else {
+			    throw err;
+			  }
+			}
 
 			consola.info(`\n🟧 [GROQ] ── Stream finished ──────────────────────────────────`);
 			consola.info(`   Total chunks  : ${chunkCount}`);
