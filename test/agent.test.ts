@@ -17,7 +17,7 @@ if (!providerName) {
 	process.exit(1);
 }
 
-const testFile = join(tmpdir(), "pi-clone-agent-test.txt");
+const testFile = join(tmpdir(), "cogent-agent-test.txt");
 
 console.log(`\nTesting agent loop with ${providerName}/${model}...`);
 

@@ -9,6 +9,7 @@ coverage/
 *.local
 
 # local agent state
+.cogent/
 .pi-clone/
 .claude/
 

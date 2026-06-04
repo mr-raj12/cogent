@@ -1,10 +1,10 @@
 {
-	"name": "pi-clone",
+	"name": "cogent",
 	"version": "0.1.0",
 	"description": "A minimal coding agent CLI — Gemini + Groq, all tools, session management",
 	"type": "module",
 	"bin": {
-		"pi-clone": "./dist/index.js"
+		"cogent": "./dist/index.js"
 	},
 	"scripts": {
 		"dev": "tsx src/index.ts",
