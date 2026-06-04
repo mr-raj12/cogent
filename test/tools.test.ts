@@ -24,7 +24,7 @@ function assert(condition: boolean, message: string) {
 	}
 }
 
-const testDir = join(tmpdir(), "pi-clone-test");
+const testDir = join(tmpdir(), "cogent-test");
 const testFile = join(testDir, "test.txt");
 
 // --- Write tool ---
@@ -55,11 +55,11 @@ console.log("\nRead tool:");
 // --- Edit tool ---
 console.log("\nEdit tool:");
 {
-	const r = await editTool.execute({ file_path: testFile, old_string: "Hello World", new_string: "Hello Pi-Clone" });
+	const r = await editTool.execute({ file_path: testFile, old_string: "Hello World", new_string: "Hello Cogent" });
 	assert(!r.isError, "Edit succeeds");
 
 	const verify = await readTool.execute({ file_path: testFile });
-	assert(verify.output.includes("Hello Pi-Clone"), "Edit actually changed the file");
+	assert(verify.output.includes("Hello Cogent"), "Edit actually changed the file");
 
 	const rBad = await editTool.execute({ file_path: testFile, old_string: "DOES NOT EXIST", new_string: "x" });
 	assert(rBad.isError, "Edit with missing old_string returns error");
@@ -79,9 +79,9 @@ console.log("\nBash tool:");
 // --- Grep tool ---
 console.log("\nGrep tool:");
 {
-	const r = await grepTool.execute({ pattern: "Pi-Clone", path: testDir });
+	const r = await grepTool.execute({ pattern: "Cogent", path: testDir });
 	assert(!r.isError, "Grep succeeds");
-	assert(r.output.includes("Pi-Clone"), "Grep finds the pattern");
+	assert(r.output.includes("Cogent"), "Grep finds the pattern");
 
 	const rNone = await grepTool.execute({ pattern: "XYZNOTFOUND12345", path: testDir });
 	assert(!rNone.isError, "Grep with no matches doesn't error");

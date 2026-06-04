@@ -18,7 +18,7 @@ export async function runInteractiveMode(options: Pick<AgentOptions, "providerNa
 			rl.once("line", resolve);
 		});
 
-	console.log(chalk.bold("pi-clone") + chalk.gray(` — ${options.providerName}/${options.model}`));
+	console.log(chalk.bold("cogent") + chalk.gray(` — ${options.providerName}/${options.model}`));
 	console.log(chalk.gray("Type your message. Ctrl+C to exit.\n"));
 
 	while (true) {

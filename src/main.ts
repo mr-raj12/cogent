@@ -28,8 +28,8 @@ export async function main(argv: string[]): Promise<void> {
 
 	const settings = await loadSettings();
 
-	const providerName = args.provider ?? settings.provider ?? process.env.PI_CLONE_PROVIDER ?? "gemini";
-	const model = args.model ?? settings.model ?? process.env.PI_CLONE_MODEL ?? getDefaultModel(providerName);
+	const providerName = args.provider ?? settings.provider ?? process.env.COGENT_PROVIDER ?? "gemini";
+	const model = args.model ?? settings.model ?? process.env.COGENT_MODEL ?? getDefaultModel(providerName);
 
 	const messages: Message[] = [];
 

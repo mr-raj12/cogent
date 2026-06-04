@@ -1,5 +1,5 @@
 // Session storage as JSONL — one JSON entry per line, appended as the
-// conversation grows. Sessions live under .pi-clone/sessions/<id>.jsonl.
+// conversation grows. Sessions live under .cogent/sessions/<id>.jsonl.
 
 import { existsSync } from "node:fs";
 import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 import type { Session, SessionEntry } from "./types.js";
 
 export function getSessionDir(): string {
-	return join(process.cwd(), ".pi-clone", "sessions");
+	return join(process.cwd(), ".cogent", "sessions");
 }
 
 export function getSessionPath(sessionId: string): string {

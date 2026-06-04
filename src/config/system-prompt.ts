@@ -4,12 +4,12 @@ import { join } from "node:path";
 import { ALL_TOOLS } from "../tools/index.js";
 
 // Project context files, loaded in priority order if present.
-const CONTEXT_FILES = ["AGENTS.md", "CLAUDE.md", ".context", ".pi-clone/context.md"];
+const CONTEXT_FILES = ["AGENTS.md", "CLAUDE.md", ".context", ".cogent/context.md"];
 
 // Assemble the system prompt from base instructions, the tool list, any project
 // context files, and an optional extra string from settings.
 export async function buildSystemPrompt(extra?: string): Promise<string> {
-	const base = `You are pi-clone, an autonomous coding assistant.
+	const base = `You are cogent, an autonomous coding assistant.
 You are running in: ${process.cwd()}
 Today: ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
 

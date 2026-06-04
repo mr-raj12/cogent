@@ -60,11 +60,11 @@ export function parseArgs(argv: string[]): CliArgs {
 
 export function printHelp(): void {
 	console.log(`
-pi-clone — minimal coding agent
+cogent — minimal coding agent
 
 USAGE
-  pi-clone [message]          Interactive mode (default)
-  pi-clone --print [message]  Print mode: stream output to stdout
+  cogent [message]          Interactive mode (default)
+  cogent --print [message]  Print mode: stream output to stdout
 
 OPTIONS
   --provider <name>   Provider to use: gemini (default) or groq
@@ -78,16 +78,16 @@ OPTIONS
 ENVIRONMENT
   GEMINI_API_KEY      Google Gemini API key
   GROQ_API_KEY        Groq API key
-  PI_CLONE_PROVIDER   Default provider
-  PI_CLONE_MODEL      Default model
+  COGENT_PROVIDER    Default provider
+  COGENT_MODEL       Default model
 
 EXAMPLES
-  pi-clone                                  # Start interactive chat
-  pi-clone "explain this codebase"          # One-shot interactive
-  echo "list all ts files" | pi-clone -p    # Pipe input, stream output
+  cogent                                 # Start interactive chat
+  cogent "explain this codebase"         # One-shot interactive
+  echo "list all ts files" | cogent -p   # Pipe input, stream output
 `);
 }
 
 export function printVersion(): void {
-	console.log("pi-clone 0.1.0");
+	console.log("cogent 0.1.0");
 }
