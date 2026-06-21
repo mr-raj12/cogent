@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gemini agent loop — mimic</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#11161d; --panel2:#0a0e14; --border:#222b36;
+    --text:#c9d1d9; --dim:#7d8896; --accent:#58a6ff; --green:#3fb950;
+    --yellow:#d29922; --purple:#bc8cff; --red:#f85149; --user:#1f6feb;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.5}
+  header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel)}
+  header h1{font-size:14px;margin:0;font-weight:600}
+  header .sub{color:var(--dim);font-size:12px}
+  .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+  button{font-family:var(--mono);font-size:12px;background:#21262d;color:var(--text);border:1px solid var(--border);
+    padding:6px 12px;border-radius:6px;cursor:pointer}
+  button:hover{background:#2d333b}
+  button.primary{background:var(--user);border-color:var(--user);color:#fff}
+  button.primary:hover{filter:brightness(1.1)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 53px)}
+  .col{overflow:auto;padding:14px 16px}
+  .col.left{border-right:1px solid var(--border);background:var(--panel2)}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:0 0 8px;font-weight:600}
+  .section{margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:0;overflow:hidden}
+  .card .hd{padding:7px 11px;border-bottom:1px solid var(--border);color:var(--dim);font-size:11px;display:flex;justify-content:space-between}
+  pre{margin:0;padding:11px;white-space:pre-wrap;word-break:break-word;font-size:12px}
+  .k{color:var(--purple)} .s{color:var(--green)} .n{color:var(--yellow)} .c{color:var(--dim)} .punct{color:#8b949e}
+  .role-user{color:var(--accent)} .role-model{color:var(--green)} .role-tool{color:var(--yellow)}
+  .msg{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;background:var(--panel)}
+  .msg .mhd{padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+  .badge{font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--border)}
+  .badge.user{color:var(--accent);border-color:#1f4f8b}
+  .badge.assistant{color:var(--green);border-color:#1c5a2b}
+  .msg .body{padding:9px 11px}
+  .block{padding:6px 9px;border-radius:6px;margin:5px 0;background:var(--panel2);border:1px solid var(--border)}
+  .block .blabel{font-size:10px;color:var(--dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+  .block.text .blabel{color:var(--accent)}
+  .block.tool_use .blabel{color:var(--purple)}
+  .block.tool_result .blabel{color:var(--yellow)}
+  .cursor{display:inline-block;width:7px;height:13px;background:var(--green);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .log{font-size:11.5px}
+  .log .line{padding:2px 0;white-space:pre-wrap}
+  .log .t{color:var(--dim)}
+  .log .ev-agent_start,.log .ev-agent_end{color:var(--accent)}
+  .log .ev-stream{color:var(--green)}
+  .log .ev-tool{color:var(--purple)}
+  .log .ev-turn{color:var(--yellow)}
+  .log .ev-push{color:#8b949e}
+  .empty{color:var(--dim);font-style:italic;padding:8px}
+  .pill{display:inline-block;font-size:10px;padding:1px 6px;border:1px solid var(--border);border-radius:4px;color:var(--dim);margin-right:5px}
+  .composer{display:flex;gap:8px;margin-top:6px}
+  .composer input{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:6px}
+  .hint{color:var(--dim);font-size:11px;margin-top:6px}
+  .flash{animation:flash 1s ease}
+  @keyframes flash{from{background:#1c2a18}to{background:var(--panel)}}
+  .turnsep{text-align:center;color:var(--dim);font-size:10px;margin:6px 0;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧪 Gemini agent loop — <span style="color:var(--dim)">mimic</span></h1>
+  <span class="sub">no real API call · simulates <code>generateContentStream()</code> + <code>messages</code> growing</span>
+  <div class="controls">
+    <span id="status" class="sub"></span>
+    <button id="reset">⟲ reset session</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: the request that gets sent -->
+  <div class="col left">
+    <div class="section">
+      <h2>1 · client.models.generateContentStream( request )</h2>
+      <div class="card">
+        <div class="hd"><span>the object sent to Gemini</span><span id="reqstate" class="c">idle</span></div>
+        <pre id="request"></pre>
+      </div>
+      <div class="hint">▸ <b>contents</b> is rebuilt from <code>messages</code> every turn via <code>toGeminiContents()</code> — watch it grow each round-trip.</div>
+    </div>
+
+    <div class="section">
+      <h2>config.tools (built once from tool registry)</h2>
+      <div class="card"><pre id="tools"></pre></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: the messages array + loop log -->
+  <div class="col right">
+    <div class="section">
+      <h2>messages[]  <span style="color:var(--dim)">— our internal history (the source of truth)</span></h2>
+      <div id="messages"></div>
+      <div class="composer">
+        <input id="prompt" placeholder="type a message…  (try: what's in config.json?)" />
+        <button id="send" class="primary">send ▸</button>
+      </div>
+      <div class="hint">Hardcoded mimic: any send replays a scripted model turn (one tool call → final answer). Empty/initial state = fresh repo session.</div>
+    </div>
+
+    <div class="section">
+      <h2>agent loop events (runAgent)</h2>
+      <div class="card"><div id="log" class="log" style="padding:10px"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   MIMIC of tui-starter: runAgent.ts + createProvider.ts (Gemini)
+   No network. Everything below is hardcoded/simulated so you can WATCH:
+     - messages[]  growing  (user -> assistant -> user(tool_result) -> assistant)
+     - contents    rebuilt from messages each turn (toGeminiContents)
+     - the request object passed to generateContentStream()
+   ========================================================================== */
+
+// ---- static config (mirrors CompletionOptions / config in createProvider) ----
+const SYSTEM = "You are a helpful coding assistant. Use tools when needed.";
+const MODEL  = "gemini-2.5-flash";
+const MAX_TOKENS = 8192;
+const TEMPERATURE = 0.7;
+
+// tool registry (getToolDefinitions) -> becomes config.tools.functionDeclarations
+const TOOL_DEFS = [
+  {
+    name: "read_file",
+    description: "Read a file from disk and return its contents.",
+    input_schema: {
+      type: "object",
+      properties: { file_path: { type: "string", description: "path to file" } },
+      required: ["file_path"]
+    }
+  },
+  {
+    name: "list_files",
+    description: "List files in a directory.",
+    input_schema: {
+      type: "object",
+      properties: { dir: { type: "string" } },
+      required: ["dir"]
+    }
+  }
+];
+
+// fake "disk" the mock tools read from
+const FAKE_FS = {
+  "config.json": JSON.stringify({
+    providers: [{ name: "gemini", apiKey: "AIza••••••••" }],
+    defaultModel: "gemini-2.5-flash"
+  }, null, 2)
+};
+
+// mock tool executor (stands in for tool.execute in runAgent)
+function executeTool(name, input){
+  if (name === "read_file"){
+    const f = FAKE_FS[input.file_path];
+    return f != null
+      ? { output: f, isError:false }
+      : { output:`Tool error: no such file ${input.file_path}`, isError:true };
+  }
+  if (name === "list_files") return { output: Object.keys(FAKE_FS).join("\n"), isError:false };
+  return { output:`Unknown tool: ${name}`, isError:true };
+}
+
+/* ----------------------------------------------------------------------------
+   toGeminiContents() — faithful port of createProvider.ts.
+   system role is dropped (goes to config.systemInstruction).
+   assistant->"model", everything else->"user".
+   tool_use -> functionCall ; tool_result -> functionResponse (in a user turn).
+   -------------------------------------------------------------------------- */
+function toGeminiContents(messages){
+  return messages.filter(m => m.role !== "system").map(m => {
+    const role = m.role === "assistant" ? "model" : "user";
+    if (typeof m.content === "string") return { role, parts:[{ text:m.content }] };
+    const parts = m.content.map(b => {
+      if (b.type === "text")      return { text:b.text };
+      if (b.type === "tool_use")  return { functionCall:{ name:b.name, args:b.input } };
+      if (b.type === "tool_result") return {
+        functionResponse:{ name:b.tool_use_id, response:{ output:b.content, is_error:b.is_error ?? false } }
+      };
+      return { text:"" };
+    });
+    return { role, parts };
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   SCRIPTED provider — replaces createGeminiProvider().complete().
+   Given the current messages, returns the stream events for ONE model turn.
+   This is the "hardcoded" brain: it decides text + tool calls deterministically.
+   -------------------------------------------------------------------------- */
+function scriptTurn(messages){
+  // did we already feed a tool_result back in? if so -> final answer, else -> call a tool
+  const sawToolResult = messages.some(m =>
+    Array.isArray(m.content) && m.content.some(b => b.type === "tool_result"));
+
+  const lastUser = [...messages].reverse().find(m => m.role === "user" && typeof m.content === "string");
+  const asked = (lastUser?.content || "").toLowerCase();
+
+  if (!sawToolResult && (asked.includes("config") || asked.includes("file") || asked.includes("read"))){
+    // turn 1: a bit of text, then a tool call
+    const id = "call_" + Math.random().toString(36).slice(2,8);
+    return [
+      { type:"text_delta", delta:"Sure — " },
+      { type:"text_delta", delta:"let me read that file." },
+      { type:"tool_use_start", id, name:"read_file" },
+      { type:"tool_use_input_delta", id, delta: JSON.stringify({ file_path:"config.json" }) },
+      { type:"tool_use_end", id },
+      { type:"message_end", stop_reason:"end_turn", usage:{ input_tokens:142, output_tokens:18 } },
+    ];
+  }
+  if (sawToolResult){
+    // turn 2: final natural-language answer, no tools
+    return [
+      { type:"text_delta", delta:"`config.json` has one " },
+      { type:"text_delta", delta:"gemini provider and " },
+      { type:"text_delta", delta:"defaults to gemini-2.5-flash." },
+      { type:"message_end", stop_reason:"end_turn", usage:{ input_tokens:210, output_tokens:24 } },
+    ];
+  }
+  // generic: just answer in text
+  return [
+    { type:"text_delta", delta:"(mimic) I only have a scripted tool flow — " },
+    { type:"text_delta", delta:"try asking \"what's in config.json?\"" },
+    { type:"message_end", stop_reason:"end_turn", usage:{ input_tokens:90, output_tokens:14 } },
+  ];
+}
+
+/* ===========================  STATE + RENDER  ============================= */
+let messages = [];           // <-- the growing array, starts EMPTY (fresh repo)
+let busy = false;
+
+const $ = id => document.getElementById(id);
+
+// pretty JSON with light syntax coloring
+function jhtml(obj){
+  const json = JSON.stringify(obj, null, 2);
+  return json
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"(\\.|[^"\\])*"(\s*:)?/g, (m,_g,colon)=> colon
+        ? '<span class="k">'+m.slice(0,-1)+'</span>:'
+        : '<span class="s">'+m+'</span>')
+    .replace(/\b(true|false|null)\b/g,'<span class="c">$1</span>')
+    .replace(/\b(\d+(\.\d+)?)\b/g,'<span class="n">$1</span>');
+}
+
+function renderRequest(streaming){
+  const contents = toGeminiContents(messages);
+  // the EXACT object shape passed to generateContentStream(...)
+  const request = {
+    model: MODEL,
+    contents,
+    config: {
+      systemInstruction: SYSTEM,
+      tools: "‹functionDeclarations: "+TOOL_DEFS.map(t=>t.name).join(", ")+"›",
+      maxOutputTokens: MAX_TOKENS,
+      temperature: TEMPERATURE,
+    }
+  };
+  $("request").innerHTML = jhtml(request);
+  $("reqstate").textContent = streaming ? "streaming…" : (messages.length? "ready" : "idle");
+  $("reqstate").style.color = streaming ? "var(--green)" : "var(--dim)";
+}
+
+function renderTools(){
+  $("tools").innerHTML = jhtml([{ functionDeclarations: TOOL_DEFS.map(t=>({
+    name:t.name, description:t.description, parameters:t.input_schema
+  })) }]);
+}
+
+function blockHtml(b){
+  if (b.type === "text")
+    return `<div class="block text"><div class="blabel">text</div>${esc(b.text)}${b._streaming?'<span class="cursor"></span>':''}</div>`;
+  if (b.type === "tool_use")
+    return `<div class="block tool_use"><div class="blabel">tool_use · ${esc(b.name)} <span class="pill">${esc(b.id)}</span></div>${esc(JSON.stringify(b.input))}</div>`;
+  if (b.type === "tool_result")
+    return `<div class="block tool_result"><div class="blabel">tool_result ${b.is_error?'· <span style="color:var(--red)">error</span>':''} <span class="pill">${esc(b.tool_use_id)}</span></div>${esc(b.content)}</div>`;
+  return "";
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function renderMessages(flashLast){
+  const el = $("messages");
+  if (!messages.length){ el.innerHTML = '<div class="empty">// messages is empty — fresh session, repo just initialized. Send a message to begin.</div>'; return; }
+  el.innerHTML = messages.map((m,i)=>{
+    const body = typeof m.content === "string"
+      ? `<div class="block text"><div class="blabel">string content</div>${esc(m.content)}</div>`
+      : m.content.map(blockHtml).join("");
+    const flash = (flashLast && i===messages.length-1) ? " flash":"";
+    return `<div class="msg${flash}"><div class="mhd"><span class="badge ${m.role}">${m.role}</span>
+      <span class="c">messages[${i}]</span></div><div class="body">${body}</div></div>`;
+  }).join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+function log(cls, txt){
+  const t = new Date().toLocaleTimeString([], {hour12:false});
+  const div = document.createElement("div");
+  div.className = "line ev-"+cls;
+  div.innerHTML = `<span class="t">${t}</span>  ${esc(txt)}`;
+  $("log").appendChild(div);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ===========================  THE AGENT LOOP  ============================= */
+async function runAgent(){
+  busy = true; $("send").disabled = true; $("prompt").disabled = true;
+  log("agent_start","▶ agent_start   (maxTurns=5)");
+
+  let turns = 0;
+  const MAX_TURNS = 5;
+
+  while (turns < MAX_TURNS){
+    turns++;
+    log("turn", `── turn ${turns} ──  sending generateContentStream(): contents has ${toGeminiContents(messages).length} turn(s)`);
+    renderRequest(true);
+
+    const events = scriptTurn(messages);
+    const assistantBlocks = [];
+    const pending = {};
+    let stopReason = "end_turn";
+
+    // ----- consume the stream, building assistantBlocks live (like runAgent) -----
+    for (const ev of events){
+      await sleep(220);
+      if (ev.type === "text_delta"){
+        let last = assistantBlocks.at(-1);
+        if (last && last.type === "text"){ last.text += ev.delta; }
+        else { last = { type:"text", text:ev.delta, _streaming:true }; assistantBlocks.push(last); }
+        // show partial assistant message DURING the stream
+        renderStreaming(assistantBlocks);
+        log("stream", `  text_delta  «${ev.delta}»`);
+      }
+      else if (ev.type === "tool_use_start"){
+        pending[ev.id] = { name:ev.name, inputJson:"" };
+        log("tool", `  tool_use_start  ${ev.name}  (${ev.id})`);
+      }
+      else if (ev.type === "tool_use_input_delta"){
+        if (pending[ev.id]) pending[ev.id].inputJson += ev.delta;
+        log("tool", `  tool_use_input_delta  ${ev.delta}`);
+      }
+      else if (ev.type === "tool_use_end"){
+        const tc = pending[ev.id];
+        const input = JSON.parse(tc.inputJson || "{}");
+        assistantBlocks.push({ type:"tool_use", id:ev.id, name:tc.name, input });
+        renderStreaming(assistantBlocks);
+        log("tool", `  tool_use_end  -> parsed input ${JSON.stringify(input)}`);
+      }
+      else if (ev.type === "message_end"){
+        stopReason = ev.stop_reason;
+        log("turn", `  message_end  stop=${ev.stop_reason}  usage(in=${ev.usage.input_tokens}, out=${ev.usage.output_tokens})`);
+      }
+    }
+
+    // finalize: clear streaming cursors
+    assistantBlocks.forEach(b => delete b._streaming);
+
+    // ----- messages.push(assistant) : OUTPUT stored back into history -----
+    messages.push({ role:"assistant", content: assistantBlocks });
+    log("push", `  messages.push(assistant)  -> messages.length=${messages.length}`);
+    renderMessages(true); renderRequest(false);
+
+    const hasToolCalls = assistantBlocks.some(b => b.type === "tool_use");
+    if (!hasToolCalls){ log("turn","  no tool calls -> break loop"); break; }
+
+    // ----- execute tools, push results as a user message -----
+    const toolResultBlocks = [];
+    for (const b of assistantBlocks){
+      if (b.type !== "tool_use") continue;
+      log("tool", `  ⚙ executing ${b.name}(${JSON.stringify(b.input)})`);
+      await sleep(350);
+      const res = executeTool(b.name, b.input);
+      log("tool", `  ✓ tool_end  ${b.name}  isError=${res.isError}  (${res.output.length} chars)`);
+      toolResultBlocks.push({ type:"tool_result", tool_use_id:b.id, content:res.output, is_error:res.isError });
+    }
+    messages.push({ role:"user", content: toolResultBlocks });
+    log("push", `  messages.push(user: tool_result)  -> messages.length=${messages.length}  (loops back ↺)`);
+    renderMessages(true); renderRequest(false);
+    await sleep(400);
+  }
+
+  log("agent_end", `■ agent_end   final messages.length=${messages.length}`);
+  busy = false; $("send").disabled = false; $("prompt").disabled = false; $("prompt").focus();
+}
+
+// render the in-flight assistant message (not yet pushed) as a ghost row
+function renderStreaming(assistantBlocks){
+  renderMessages(false);
+  const el = $("messages");
+  const ghost = document.createElement("div");
+  ghost.className = "msg";
+  ghost.innerHTML = `<div class="mhd"><span class="badge assistant">assistant</span>
+    <span class="c">streaming… (not yet in messages[])</span></div>
+    <div class="body">${assistantBlocks.map(blockHtml).join("")}</div>`;
+  el.appendChild(ghost);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ===============================  WIRING  ================================= */
+function send(){
+  if (busy) return;
+  const text = $("prompt").value.trim();
+  if (!text) return;
+  messages.push({ role:"user", content:text });   // user message: plain string content
+  $("prompt").value = "";
+  log("push", `user message added -> messages.length=${messages.length}`);
+  renderMessages(true);
+  runAgent();
+}
+
+function reset(){
+  if (busy) return;
+  messages = [];
+  $("log").innerHTML = "";
+  renderMessages(false); renderRequest(false);
+  log("agent_end","session reset · messages=[] (fresh repo)");
+}
+
+$("send").onclick = send;
+$("prompt").addEventListener("keydown", e => { if (e.key==="Enter") send(); });
+$("reset").onclick = reset;
+
+// boot
+renderTools(); renderMessages(false); renderRequest(false);
+$("prompt").value = "what's in config.json?";
+log("agent_end","ready · empty session. Press send.");
+</script>
+</body>
+</html>
