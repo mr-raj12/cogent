@@ -2,7 +2,9 @@
 
 ## Demo
 
-[Watch the walkthrough](https://www.loom.com/share/366914f885fe4241a38b8a9cdad8c09b)
+[<img src="https://cdn.loom.com/sessions/thumbnails/366914f885fe4241a38b8a9cdad8c09b-84de9d06212644a2.gif" width="640" alt="Watch the cogent walkthrough">](https://www.loom.com/share/366914f885fe4241a38b8a9cdad8c09b)
+
+[Watch the walkthrough](https://www.loom.com/share/366914f885fe4241a38b8a9cdad8c09b) (3:38)
 
 <iframe width="640" height="329" src="https://www.loom.com/embed/366914f885fe4241a38b8a9cdad8c09b" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
