@@ -11,7 +11,8 @@
 		"verbatimModuleSyntax": true,
 		"declaration": true,
 		"sourceMap": true,
-		"noUncheckedIndexedAccess": false
+		"noUncheckedIndexedAccess": false,
+		"jsx": "react-jsx"
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "test"]
