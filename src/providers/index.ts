@@ -1,9 +1,25 @@
+import { createAnthropicProvider } from "./anthropic.js";
 import { createGeminiProvider } from "./gemini.js";
 import { createGroqProvider } from "./groq.js";
 import type { ModelInfo, Provider } from "./types.js";
 
 // All supported models — add more here as needed
 export const MODELS: ModelInfo[] = [
+	// Anthropic
+	{
+		id: "claude-sonnet-5",
+		name: "Claude Sonnet 5",
+		provider: "anthropic",
+		contextWindow: 1_000_000,
+		maxOutputTokens: 128_000,
+	},
+	{
+		id: "claude-haiku-4-5",
+		name: "Claude Haiku 4.5",
+		provider: "anthropic",
+		contextWindow: 200_000,
+		maxOutputTokens: 64_000,
+	},
 	// Gemini
 	{
 		id: "gemini-2.5-pro",
@@ -60,12 +76,14 @@ export const MODELS: ModelInfo[] = [
 
 export function createProvider(providerName: string, apiKey: string): Provider {
 	switch (providerName) {
+		case "anthropic":
+			return createAnthropicProvider(apiKey);
 		case "gemini":
 			return createGeminiProvider(apiKey);
 		case "groq":
 			return createGroqProvider(apiKey);
 		default:
-			throw new Error(`Unknown provider: "${providerName}". Available: gemini, groq`);
+			throw new Error(`Unknown provider: "${providerName}". Available: anthropic, gemini, groq`);
 	}
 }
 
@@ -77,7 +95,18 @@ export function getProviderModels(providerName: string): ModelInfo[] {
 	return MODELS.filter((m) => m.provider === providerName);
 }
 
+// Picked deliberately rather than "first in the list": the default should be a
+// fast, widely-available model, not the largest one.
+const DEFAULT_MODELS: Record<string, string> = {
+	anthropic: "claude-sonnet-5",
+	gemini: "gemini-2.5-flash",
+	groq: "llama-3.3-70b-versatile",
+};
+
 export function getDefaultModel(providerName: string): string {
+	const preferred = DEFAULT_MODELS[providerName];
+	if (preferred) return preferred;
+
 	const models = getProviderModels(providerName);
 	if (models.length === 0) throw new Error(`No models for provider: ${providerName}`);
 	return models[0]!.id;
