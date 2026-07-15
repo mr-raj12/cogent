@@ -2,6 +2,7 @@ import type { ToolDefinition } from "../providers/types.js";
 import { bashTool } from "./bash.js";
 import { editTool } from "./edit.js";
 import { findTool } from "./find.js";
+import { GIT_TOOLS } from "./git.js";
 import { grepTool } from "./grep.js";
 import { lsTool } from "./ls.js";
 import { readTool } from "./read.js";
@@ -11,7 +12,7 @@ import { writeTool } from "./write.js";
 export * from "./types.js";
 
 // All tools registered here — add new tools to this list
-export const ALL_TOOLS: Tool[] = [readTool, writeTool, editTool, bashTool, grepTool, findTool, lsTool];
+export const ALL_TOOLS: Tool[] = [readTool, writeTool, editTool, bashTool, grepTool, findTool, lsTool, ...GIT_TOOLS];
 
 // Convert our Tool format to the JSON Schema format the LLM expects
 export function getToolDefinitions(): ToolDefinition[] {
