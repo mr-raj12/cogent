@@ -1,9 +1,16 @@
 # cogent
 
+## Demo
+
+[Watch the walkthrough](https://www.loom.com/share/366914f885fe4241a38b8a9cdad8c09b)
+
+<iframe width="640" height="329" src="https://www.loom.com/embed/366914f885fe4241a38b8a9cdad8c09b" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+
 A minimal coding agent for the terminal. It gives a language model controlled
 access to your filesystem and shell through a small set of tools, then runs an
-autonomous read–act loop until the task is done. Two model providers work out of
-the box — Google Gemini and Groq — behind a single streaming interface.
+autonomous read-act loop until the task is done. Three model providers work out
+of the box (Anthropic, Google Gemini, and Groq) behind a single streaming
+interface.
 
 ```bash
 cogent "find every TODO in src/ and tell me what's left"
@@ -15,6 +22,7 @@ cogent                       # interactive REPL
 
 ## Contents
 
+- [Demo](#demo)
 - [Overview](#overview)
 - [Features](#features)
 - [System design](#system-design)
@@ -41,23 +49,27 @@ It is small enough to read in a sitting and complete enough to use on real work.
 
 ## Features
 
-- **Two providers, one interface.** Gemini (`@google/genai`) and Groq
-  (OpenAI-compatible) implement a common `Provider` contract. Switching is a
-  single flag or settings key.
+- **Three providers, one interface.** Anthropic (`@anthropic-ai/sdk`), Gemini
+  (`@google/genai`), and Groq (OpenAI-compatible) implement a common `Provider`
+  contract. Switching is a single flag or settings key.
 - **Streaming end to end.** Async generators carry tokens from the HTTP response
   through the agent loop to stdout, so output renders as it is produced.
-- **Seven filesystem and shell tools.** `Read`, `Write`, `Edit`, `Bash`,
-  `Grep`, `Find`, `Ls`, each a self-contained module with a JSON-Schema
-  signature the model sees.
+- **Filesystem, shell, and git tools.** `Read`, `Write`, `Edit`, `Bash`, `Grep`,
+  `Find`, `Ls`, and eight [git tools](docs/git-tools.md), each a self-contained
+  module with a JSON-Schema signature the model sees.
+- **Permission prompts before changes.** Tools that only observe run freely;
+  anything that writes, runs a command, or touches git asks first, with an
+  allow-for-this-session answer per tool. `--yolo` skips the prompts.
 - **Provider-agnostic message format.** An internal content-block model
   (text / tool-use / tool-result) is translated per provider, including Groq's
   habit of emitting tool calls as raw text on some Llama models.
 - **Layered configuration.** Global, project, and environment settings merge in
   a predictable order of precedence.
-- **Two run modes.** A one-shot print mode for pipes and scripts, and a readline
-  REPL for interactive sessions — both rendering the same event stream.
-- **Session persistence.** Conversations are stored as append-only JSONL and can
-  be reconstructed from disk.
+- **Three run modes.** A full-screen Ink TUI, a one-shot print mode for pipes and
+  scripts, and a plain readline REPL (`--classic`, and the automatic fallback
+  when stdout is not a terminal). All three render the same event stream.
+- **Session persistence.** Conversations are stored as append-only JSONL, listed
+  with `--list-sessions`, and resumed with `--session <id>`.
 - **Context compaction.** As a conversation approaches the model's context
   window, older turns are summarized to free up room.
 
@@ -152,23 +164,31 @@ src/
 │   └── system-prompt.ts  # prompt assembly + project context files
 ├── providers/
 │   ├── types.ts          # Provider / StreamEvent / ModelInfo contracts
+│   ├── anthropic.ts      # Anthropic adapter
 │   ├── gemini.ts         # Gemini adapter
 │   ├── groq.ts           # Groq adapter
+│   ├── errors.ts         # SDK failures to readable messages
 │   └── index.ts          # provider factory + model registry
 ├── tools/
 │   ├── types.ts          # Tool contract + result helpers
 │   ├── {read,write,edit,bash,grep,find,ls}.ts
+│   ├── git.ts            # eight structured git tools
 │   └── index.ts          # tool registry + JSON-Schema export
+├── permissions/
+│   ├── types.ts          # CanUseTool contract
+│   └── prompt.ts         # terminal prompt + per-session answers
 ├── agent/
 │   ├── types.ts          # AgentEvent / AgentOptions
 │   ├── loop.ts           # the agent loop
 │   └── compaction.ts     # context-window summarization
 ├── session/
 │   ├── types.ts
-│   ├── store.ts          # JSONL read/append
+│   ├── store.ts          # JSONL read/append + summaries
 │   └── manager.ts        # create / resume / save
+├── tui/                  # Ink UI: App, components, markdown, theme
 └── modes/
     ├── print.ts          # one-shot streaming to stdout
+    ├── commands.ts       # slash commands
     └── interactive.ts    # readline REPL
 
 test/                     # provider, tool, and agent-loop suites
@@ -180,7 +200,8 @@ test/                     # provider, tool, and agent-loop suites
 |------|--------|
 | Language | TypeScript (strict), ESM with `NodeNext` resolution |
 | Runtime | Node 22+ |
-| Model SDKs | `@google/genai`, `groq-sdk` |
+| Model SDKs | `@anthropic-ai/sdk`, `@google/genai`, `groq-sdk` |
+| Terminal UI | `ink`, `react` |
 | Terminal output | `chalk`, `consola` |
 | Utilities | `diff`, `glob`, `ignore` |
 | Tooling | Biome (lint + format), Vitest, `tsx` |
@@ -198,6 +219,7 @@ cp .env.example .env       # add your key(s)
 
 ```bash
 # .env
+ANTHROPIC_API_KEY=...      # https://platform.claude.com/settings/keys
 GEMINI_API_KEY=...         # https://aistudio.google.com/apikey
 GROQ_API_KEY=...           # https://console.groq.com/keys
 ```
@@ -218,16 +240,20 @@ node dist/index.js "explain what this project does"
 ## Usage
 
 ```
-cogent [message]            Interactive REPL (default)
+cogent [message]            Interactive TUI (default)
 cogent --print [message]    One-shot: stream the answer to stdout
 echo "..." | cogent -p      Read the prompt from a pipe
 
 Options
-  --provider <name>   gemini (default) or groq
+  --provider <name>   anthropic, gemini (default), or groq
   --model <id>        Specific model (see --list-models)
-  --session <id>      Session id
+  --session <id>      Resume a saved session (see --list-sessions)
   --list-models       Print available models
+  --list-sessions     Print saved sessions, newest first
   --print, -p         Non-interactive output
+  --classic           Plain readline REPL instead of the TUI
+  --yolo              Run tools without asking permission
+  --context-limit <n> Override the model's context window
   --version, -v
   --help, -h
 ```
@@ -269,15 +295,20 @@ list, and the first of these files found in the working directory:
 | `Grep` | Regex search across file contents |
 | `Find` | Locate files by glob-style name pattern |
 | `Ls` | List a directory with types and sizes |
+| `Git*` | Eight structured git tools, documented in [docs/git-tools.md](docs/git-tools.md) |
 
-A tool is an object implementing the `Tool` interface — a name, a description, a
+A tool is an object implementing the `Tool` interface: a name, a description, a
 JSON-Schema `inputSchema`, and an async `execute`. Register it in
-`src/tools/index.ts` and it is immediately offered to the model.
+`src/tools/index.ts` and it is immediately offered to the model. Setting
+`readOnly: true` marks a tool as observe-only, which is what lets it run without
+a permission prompt.
 
 ## Supported models
 
 | Provider | Model | Context |
 |----------|-------|---------|
+| Anthropic | `claude-sonnet-5` | 1M |
+| Anthropic | `claude-haiku-4-5` | 200K |
 | Gemini | `gemini-2.5-pro` | 1M |
 | Gemini | `gemini-2.5-flash` | 1M |
 | Gemini | `gemini-2.0-flash` | 1M |
