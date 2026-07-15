@@ -13,6 +13,7 @@ export const findTool: Tool = {
 	description:
 		"Find files by name pattern. Supports wildcards: * (any chars), ? (one char). " +
 		"Searches recursively. Skips node_modules, .git, dist.",
+	readOnly: true,
 	inputSchema: {
 		type: "object",
 		properties: {

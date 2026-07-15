@@ -13,6 +13,7 @@ export const grepTool: Tool = {
 		"Search for a pattern (regex) in file contents. " +
 		"Returns matching lines with file path and line number. " +
 		"Searches recursively in directories. Skips node_modules and .git.",
+	readOnly: true,
 	inputSchema: {
 		type: "object",
 		properties: {

@@ -9,6 +9,7 @@ export interface Tool {
 	name: string;
 	description: string;
 	inputSchema: Record<string, unknown>; // JSON Schema — tells the LLM what fields to pass
+	readOnly?: boolean; // true = observes only; runs without asking permission
 	execute(input: Record<string, unknown>): Promise<ToolResult>;
 }
 

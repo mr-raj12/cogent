@@ -11,6 +11,7 @@ export const readTool: Tool = {
 	description:
 		"Read the contents of a file. Returns content with line numbers prefixed (e.g. '1\\tline content'). " +
 		"Use offset and limit to read a specific range of lines.",
+	readOnly: true,
 	inputSchema: {
 		type: "object",
 		properties: {

@@ -8,6 +8,7 @@ import { errorResult, okResult } from "./types.js";
 export const lsTool: Tool = {
 	name: "Ls",
 	description: "List files and directories at a path. Shows type (file/dir), size, and name.",
+	readOnly: true,
 	inputSchema: {
 		type: "object",
 		properties: {
