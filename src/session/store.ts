@@ -4,6 +4,7 @@
 import { existsSync } from "node:fs";
 import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getTextContent } from "../types.js";
 import type { Session, SessionEntry } from "./types.js";
 
 export function getSessionDir(): string {
@@ -53,4 +54,39 @@ export async function listSessions(): Promise<string[]> {
 	await ensureSessionDir();
 	const files = await readdir(getSessionDir());
 	return files.filter((f) => f.endsWith(".jsonl")).map((f) => f.replace(".jsonl", ""));
+}
+
+export interface SessionSummary {
+	id: string;
+	created_at: string;
+	model: string;
+	provider: string;
+	messageCount: number;
+	firstPrompt: string;
+}
+
+// Load every session's header plus its opening prompt, newest first — enough to
+// pick one to resume without reading whole transcripts into memory.
+export async function listSessionSummaries(): Promise<SessionSummary[]> {
+	const ids = await listSessions();
+	const summaries: SessionSummary[] = [];
+
+	for (const id of ids) {
+		const session = await loadSession(id).catch(() => null);
+		if (!session) continue;
+
+		const first = session.messages.find((m) => m.role === "user");
+		const firstText = first ? getTextContent(first.content) : "";
+
+		summaries.push({
+			id: session.id,
+			created_at: session.created_at,
+			model: session.model,
+			provider: session.provider,
+			messageCount: session.messages.length,
+			firstPrompt: firstText.replace(/\s+/g, " ").slice(0, 60) || "(no prompt)",
+		});
+	}
+
+	return summaries.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }

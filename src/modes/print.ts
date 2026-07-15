@@ -3,8 +3,13 @@
 import chalk from "chalk";
 import { runAgent } from "../agent/loop.js";
 import type { AgentOptions } from "../agent/types.js";
+import { saveMessages } from "../session/manager.js";
 
-export async function runPrintMode(options: AgentOptions): Promise<void> {
+export interface PrintOptions extends AgentOptions {
+	sessionId?: string; // when set, the run is appended to this session log
+}
+
+export async function runPrintMode(options: PrintOptions): Promise<void> {
 	for await (const event of runAgent(options)) {
 		switch (event.type) {
 			case "text_delta":
@@ -25,6 +30,14 @@ export async function runPrintMode(options: AgentOptions): Promise<void> {
 				break;
 			}
 
+			case "tool_denied":
+				console.log(chalk.red(`[Denied: ${event.name}] ${event.reason}`));
+				break;
+
+			case "compacted":
+				console.log(chalk.magenta(`\n[compacted: ${event.before} → ${event.after} messages]`));
+				break;
+
 			case "turn_end": {
 				const { input_tokens, output_tokens } = event.usage;
 				console.log(chalk.gray(`\n[tokens: in=${input_tokens} out=${output_tokens}]`));
@@ -32,6 +45,7 @@ export async function runPrintMode(options: AgentOptions): Promise<void> {
 			}
 
 			case "agent_end":
+				if (options.sessionId) await saveMessages(options.sessionId, event.newMessages);
 				console.log();
 				break;
 		}

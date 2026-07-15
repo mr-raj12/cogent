@@ -22,3 +22,13 @@ export async function resumeSession(sessionId: string): Promise<Session | null> 
 export async function saveMessage(sessionId: string, message: Message): Promise<void> {
 	await appendEntry(sessionId, { type: "message", message });
 }
+
+export async function saveMessages(sessionId: string, messages: Message[]): Promise<void> {
+	for (const message of messages) await saveMessage(sessionId, message);
+}
+
+// Compaction is recorded but does not rewrite the log: the JSONL stays the
+// complete transcript, and the summary is a marker of what the model saw.
+export async function saveCompaction(sessionId: string, summary: string, originalCount: number): Promise<void> {
+	await appendEntry(sessionId, { type: "compaction", summary, original_count: originalCount });
+}
